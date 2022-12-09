@@ -1,0 +1,826 @@
+---
+title: "Homeworks22011"
+author: "Yuanyuan Yan"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Homeworks22011}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+A-22011-2022-09-09
+======================================================
+Question1 Use knitr to produce at least 3 examples (texts, figures, tables).
+figure
+```{r}
+y<-c(1,2,3,4,5,6)
+plot(y)
+```
+```{r}
+plot(rnorm(10))
+```
+
+text
+```{r}
+cat("I'm raw content.\n")
+```
+
+table
+```{r}
+knitr::kable(head(iris))
+```
+
+
+A-22011-2022-09-15
+======================================================
+3.3
+```{r}
+n<-500
+u<-runif(n)
+x<-2/((1-u)^0.5)
+hist(x, prob = TRUE, main = expression(f(x)==8*x^(-3)))
+y <- seq(0, 40, 0.1)
+lines(y, 8*y^(-3))
+```
+
+3.4
+```{r}
+##generation function
+f<-function(n,a,b,c){
+  k<-0
+  j<-0
+  y<-numeric(n)
+  while(k<n){
+    u<-runif(1)
+    j<-j+1
+    x<-runif(1)
+    if(x^(a-1)*(1-x)^(b-1)/beta(a,b)/c>=u){
+      k<-k+1
+      y[k]<-x
+    }
+  }
+j
+y
+}
+
+##Beta(3,2)
+f(1000,3,2,3)
+hist(f(1000,3,2,3), prob = TRUE)
+y <- seq(0, 1, 0.01)
+lines(y, dbeta(y,3,2))
+```
+
+3.12 Exponential-Gamma mixture
+```{r}
+n<-1000
+r<-4
+beta312<-2
+lambda<-rgamma(n,r,beta312)
+x<-rexp(n,lambda)
+x
+hist(x,prob=T)
+```
+3.13
+```{r}
+n<-1000
+r<-4
+beta313<-2
+u<-runif(n)
+x<-beta313/((1-u)^(1/r))-beta313
+hist(x, prob = TRUE)
+y <- seq(0, 15, 0.01)#f(x)=r*(beta313^r)/(beta313+y)^(r+1)
+lines(y, r*(beta313^r)/(beta313+y)^(r+1))
+```
+
+A-22011-2022-09-23
+======================================================
+5.6 antithetic variable VS simple MC theroretically
+$cov(e^u,e^{1-u})=E(e^ue^{1-u})-E(e^u)E(e^{1-u})$
+$=e-\int_{0}^{1} e^u\, {\rm d}u\int_{0}^{1} e^{1-u}\, {\rm d}u$
+$=e-(e-1)^2\approx-0.23421$
+
+$var(e^u+e^{1-u})=var(e^u+)+var(e^{1-u})+2cov(e^u,e^{1-u})$
+$=E(e^{2u})-E(e^u)^2+E(e^{2-2u})-E(e^{1-u})^2+2cov(e^u,e^{1-u})$
+$=e^2-1+2e-4(e-1)^2\approx0.01565$
+thus the percentage is 
+$100\times\frac{var(g(u)-var(e^u+e^{1-u})/4)}{var(g(u))}\approx98.3835\%$
+
+
+5.7 antithetic variable VS simple MC by Monte Carlo method
+```{r}
+MC.Phi <- function(R = 10000, antithetic = TRUE) { u <- runif(R/2)
+if (!antithetic) v <- runif(R/2) else v <- 1 - u
+u <- c(u, v)
+theta.hat<-mean(exp(u))
+theta.hat }
+
+m <- 1000
+MC1 <- MC2 <- numeric(m) 
+for (i in 1:m) {
+MC1[i] <- MC.Phi(R = 1000, anti = FALSE)
+MC2[i] <- MC.Phi(R = 1000) }
+
+print(sd(MC1))
+print(sd(MC2))
+print((var(MC1) - var(MC2))/var(MC1))
+```
+
+compare 5.6 with 5.7
+the theroretical percentage is 
+$98.3835\%$
+the computing percentage is
+$96.6331\%$
+
+
+A-22011-2022-09-30
+======================================================
+5.13，将积分区间改为[1,2]
+importance sampling
+$$f_1(x)=xe^{-\frac{x^2}{2}}$$
+它是$(0,\infty)$上的$Weibull(\sqrt2,2)$
+
+$$f_2(x)=\frac{1}{\sqrt{2\pi}}e^{-\frac{x^2}{2}}$$
+这是标准正态分布
+
+```{r}
+m<-10000
+theta.hat<-se<-numeric(2)
+g<-function(x){
+  1/((2*pi)^(0.5))*(x^2)*exp(-(x^2)/2)*(x>1)*(x<2)
+}
+
+x<-rweibull(m,2,2^(0.5))  #usingf1
+i<-c(which(x<1),which(x>2))
+x[i]<-0.5 #to catch overflow errors in g(x)
+fg<-g(x)/dweibull(x,2,2^(0.5))
+theta.hat[1]<-mean(fg)
+se[1]<-sd(fg)
+
+x<-rnorm(m)  #usingf2
+i<-c(which(x<1),which(x>2))
+x[i]<-0.5 #to catch overflow errors in g(x)
+fg<-g(x)/dnorm(x)
+theta.hat[2]<-mean(fg)
+se[2]<-sd(fg)
+
+rbind(theta.hat, se)
+```
+可以看出利用weibull函数作为重要性函数方差更小，这是因为相比与标准正态分布函数而言，它的形式上与g(x)更接近（与 g(x)相关程度更高，$\frac{g(x)}{f(x)}$越趋近一个常数，波动性越小
+
+5.15将积分区间改为[1,2]
+stratified sampling in 5.13
+```{r}
+M <- 10000; k <-10 
+r <- M/k #replicates per stratum
+N <- 50 #number of times to repeat the estimation 
+T2 <- numeric(k)
+est <- matrix(0, N, 1) 
+g<-function(x){
+  1/((2*pi)^(0.5))*(x^2)*exp(-(x^2)/2)*(x>1)*(x<2)
+}
+for (i in 1:N) {
+for(j in 1:k){T2[j]<-mean(g(runif(M/k,1+(j-1)/k,1+j/k)))} 
+est[i, 1] <- mean(T2)
+}
+mean(est)
+sd(est)
+```
+
+antithetic variable in 5.10
+```{r}
+M<-10000
+g<-function(x){
+     exp(-x)/(1+x^2)
+}
+u<-runif(M/2)
+v<-1-u
+u<-c(u,v)
+mean(g(u))
+sd(g(u))
+```
+
+ 将antithetic方法结果对比5.10的其他方法结果，stratified方法对比5.13中其他两种方法的结果，发现两种估计方法的结果都是正确的，但stratified sampling方法对方差的降低具有显著的效果
+
+A-22011-2022-10-09
+======================================================
+6.4
+```{r}
+calcCI <- function(n, alpha) {
+x <- rlnorm(n, 2, 2)
+return(mean(x)+sd(x)/(n^(0.5)) * qt(1-alpha, df=n-1))
+}
+UCL <- replicate(1000, expr = calcCI(n = 20, alpha = .05))
+sum(UCL>2)
+mean(UCL>2)
+```
+
+6.8 compare the power of Count Five test and F-test
+```{r}
+count5test <- function(x, y) {
+X <- x - mean(x)
+Y <- y - mean(y)
+outx <- sum(X > max(Y)) + sum(X < min(Y)) 
+outy <- sum(Y > max(X)) + sum(Y < min(X))
+return(as.integer(max(c(outx, outy)) > 5))
+}
+# return 1 (reject) or 0 (do not reject H0) 
+
+
+m<-10000
+n<-c(20,200,2000) #small,medium,large sample size
+power1<-numeric(3)
+power2<-numeric(3)
+
+# generate samples under H1 
+sigma1 <- 1
+sigma2 <- 1.5
+for (i in 1:3) {
+#estimate power of count five test
+power1[i] <- mean(replicate(m, expr={ 
+x <- rnorm(n[i], 0, sigma1)
+y <- rnorm(n[i], 0, sigma2) 
+count5test(x, y)
+}))
+
+#estimate power of F test
+pvalues <- replicate(m, expr = {
+x <- rnorm(n[i], 0, sigma1)
+y <- rnorm(n[i], 0, sigma2) 
+vartest <- var.test(x,y)
+vartest$p.value } )
+power2[i]<- mean(pvalues <= .05)  
+}
+
+print(power1)
+print(power2)
+```
+可以看出，随着样本量的增大，两种检验的检验功效都增大，正确拒绝原假设的概率趋近与一。无论样本量的大小，F检验的功效均高于Count Five检验
+
+
+A-22011-2022-10-14
+======================================================
+7.4
+```{r}
+library(boot)
+lambda.mle <-function(x,ind) 
+{1/mean(x[ind])}
+x<-c(3,5,7,18,43,85,91,98,100,130,230,487)
+obj<-boot(data=x,statistic=lambda.mle,R=10000) 
+obj
+round(c(original=obj$t0,bias=mean(obj$t)-obj$t0,se=sd(obj$t)),3)
+```
+
+7.5
+Refer to Exercise 7.4. Compute 95% bootstrap confidence intervals for the mean time between failures 1/λ by the standard normal, basic, percentile, and BCa methods. Compare the intervals and explain why they may differ.
+```{r}
+library(boot)
+ci.norm<-ci.basic<-ci.perc<-ci.bca<-numeric(2) 
+de <- boot(data=x,statistic=lambda.mle, R = 999)
+ci <- boot.ci(de,type=c("norm","basic","perc","bca"))
+ci.norm<-ci$norm[2:3]
+ci.basic<-ci$basic[4:5]
+ci.perc<-ci$percent[4:5]
+ci.bca<-ci$bca[4:5]
+print(rbind(ci.norm,ci.basic,ci.perc,ci.bca))
+```
+
+7.A
+Conduct a Monte Carlo study to estimate the coverage probabilities of the standard normal bootstrap confidence interval, the basic bootstrap confidence interval, and the percentile confidence interval. Sample from a normal population and check the empirical coverage rates for the sample mean. Find the proportion of times that the confidence intervals miss on the left, and the porportion of times that the confidence intervals miss on the right.
+
+```{r}
+mu<-0
+n<-1e1
+m<-100
+library(boot);
+set.seed(12345) 
+boot.mean <- function(x,i) mean(x[i]) 
+ci.norm<-ci.basic<-ci.perc<-matrix(NA,m,2) 
+for(i in 1:m){
+R<-rnorm(n) 
+de <- boot(data=R,statistic=boot.mean, R = 999)
+ci <- boot.ci(de,type=c("norm","basic","perc")) 
+ci.norm[i,]<-ci$norm[2:3]
+ci.basic[i,]<-ci$basic[4:5]
+ci.perc[i,]<-ci$percent[4:5]
+}
+cat('norm =',mean(ci.norm[,1]<=mu & ci.norm[,2]>=mu),'basic =',mean(ci.basic[,1]<=mu & ci.basic[,2]>=mu),'perc =',mean(ci.perc[,1]<=mu & ci.perc[,2]>=mu),"left.norm=",sum(ci.norm[,1]>=mu),"right.norm=",sum(ci.norm[,2]<=mu),"left.basic=",sum(ci.basic[,1]>=mu),"right.basic=",sum(ci.basic[,2]<=mu),"left.perc=",sum(ci.perc[,1]>=mu),"right.perc=",sum(ci.perc[,2]<=mu))
+```
+
+
+A-22011-2022-10-21
+======================================================
+7.8
+Refer to Exercise 7.7. Obtain the jackknife estimates of bias and standard error of $\hat\theta$
+```{r}
+data(patch, package = "bootstrap")
+n <- nrow(patch)
+cormatrix<-cov(patch[,2:6])
+lambda<-eigen(cormatrix)$val
+lambda1<-max(lambda)
+theta.hat <-lambda1 / sum(lambda) 
+print (theta.hat)
+
+#compute the jackknife replicates, leave-one-out estimates theta.jack <- numeric(n)
+theta.jack<-numeric(n)
+for (i in 1:n){
+  cormatrix.jack<-cov(patch[-i,2:6])
+  lambda.jack<-eigen(cormatrix.jack)$val
+  lambda1.jack<-max(lambda.jack)
+  theta.jack[i] <-lambda1.jack / sum(lambda.jack) 
+}
+
+bias.jack <- (n-1)*(mean(theta.jack)-theta.hat)
+se.jack<-sqrt((n-1)*mean((theta.jack-theta.hat)^2))
+round(c(original=theta.hat,bias.jack=bias.jack,se.jack=se.jack),3)
+```
+
+7.11
+In Example 7.18, leave-one-out (n-fold) cross validation was used to select the best fitting model. Use leave-two-out cross validation to compare the models.
+```{r}
+library(DAAG)
+attach(ironslag)
+n <- length(magnetic) #in DAAG ironslag 
+e1 <- e2 <- e3 <- e4 <- matrix(0,(choose(n,2)),2)
+m<-combn(n,2)
+# for n-fold cross validation
+# fit models on leave-two-out samples 
+for (k in 1:choose(n,2)) {
+y <- magnetic[-m[,k]] 
+x <- chemical[-m[,k]]
+
+J1 <- lm(y ~ x)
+yhat1 <- J1$coef[1] + J1$coef[2] * chemical[m[,k]] 
+e1[k,] <- magnetic[m[,k]] - yhat1
+
+J2 <- lm(y ~ x + I(x^2))
+yhat2 <- J2$coef[1] + J2$coef[2] * chemical[m[,k]] +J2$coef[3] * chemical[m[,k]]^2
+e2[k,] <- magnetic[m[,k]] -yhat2
+  
+J3 <- lm(log(y) ~ x) 
+logyhat3 <- J3$coef[1]+ J3$coef[2] * chemical[m[,k]] 
+yhat3 <- exp(logyhat3) 
+e3[k,] <- magnetic[m[,k]] -yhat3
+
+J4 <- lm(log(y) ~ log(x))
+logyhat4 <- J4$coef[1] + J4$coef[2] * log(chemical[m[,k]]) 
+yhat4 <- exp(logyhat4)
+e4[k,] <- magnetic[m[,k]] - yhat4
+}
+
+c(mean(rbind(e1[,1],e1[,2])),mean(rbind(e2[,1],e2[,2])),mean(rbind(e3[,1],e3[,2])),mean(rbind(e4[,1],e4[,2])))
+
+#plot
+a <- seq(10, 40, .1) #sequence for plotting fits
+L2 <- lm(magnetic ~ chemical + I(chemical^2)) 
+plot(chemical, magnetic, main="Quadratic", pch=16) 
+yhat2 <- L2$coef[1] + L2$coef[2] * a + L2$coef[3] * a^2 
+lines(a, yhat2, lwd=2)
+
+summary(L2)
+
+plot(L2$fit, L2$res) 
+abline(0, 0) 
+qqnorm(L2$res) 
+qqline(L2$res) 
+
+```
+可以看出模型二是最优的模型,总结该模型的相关信息如上
+
+8.2
+Implement the bivariate Spearman rank correlation test for independence [255] as a permutation test. The Spearman rank correlation test statistic can be obtained from function cor with method = "spearman". Compare the achieved significance level of the permutation test with the p-value reported by cor.test on the same samples.
+
+```{r}
+x<-rnorm(20,1,2)
+y<-rnorm(20,3,7)
+R <- 999
+z <- c(x, y)
+K <- 1:40
+n<-length(x) 
+set.seed(12345)
+reps <- numeric(R)
+t0 <- cor.test(x, y,method = "spearman")$statistic 
+for (i in 1:R) {
+k <- sample(K, size = n, replace = FALSE) 
+x1 <- z[k]
+y1 <- z[-k] #complement of x1
+reps[i] <- cor.test(x1, y1,method = "spearman")$statistic}
+p <- mean(abs(c(t0, reps)) >= abs(t0)) 
+round(c(p,cor.test(x,y)$p.value),3)
+```
+
+A-22011-2022-10-28
+======================================================
+9.4
+Implement a random walk Metropolis sampler for generating the standard Laplace distribution (see Exercise 3.2). For the increment, simulate from a normal distribution. Compare the chains generated when different variances are used for the proposal distribution. Also, compute the acceptance rates of each chain.
+According to Ex3.2, the standard Laplace distribution has density f (x) = 1 e−|x|, x ∈ R
+```{r}
+##the code below is from book
+rw.Metropolis <- function(sigma, x0, N) { 
+  x <- numeric(N)
+  x[1] <- x0
+  u <- runif(N)
+  k <- 0
+  for (i in 2:N) {
+    y <- rnorm(1, x[i-1], sigma)
+    if (u[i] <= ((0.5*exp(-abs(y)))/(0.5*exp(-abs(x[i-1]))))) 
+        x[i]<-y else{
+          x[i] <- x[i-1]
+          k <- k + 1 
+          }
+    }
+
+return(list(x=x, k=k)) 
+}
+
+N <- 2000
+sigma <- c(.05, .5, 2, 16)
+x0 <- 1
+rw1 <- rw.Metropolis(sigma[1], x0, N) 
+rw2 <- rw.Metropolis(sigma[2], x0, N) 
+rw3 <- rw.Metropolis(sigma[3], x0, N) 
+rw4 <- rw.Metropolis(sigma[4], x0, N) 
+#number of candidate points rejected
+print(c(rw1$k, rw2$k, rw3$k, rw4$k))
+```
+
+
+```{r}
+    rw <- cbind(rw1$x, rw2$x, rw3$x,  rw4$x)
+    for (j in 1:4) {
+        plot(rw[,j], type="l",
+             xlab=bquote(sigma == .(round(sigma[j],3))),
+             ylab="X", ylim=range(rw[,j]))
+    }
+```
+由上图可知，当sigma=2时，产生的结果更佳
+use the Gelman-Rubin method to monitor convergence of the chain, and run the chain until it converges approximately to the target distribution according to ˆR < 1.2.
+```{r}
+Gelman.Rubin <- function(psi) {
+# psi[i,j] is the statistic psi(X[i,1:j]) 
+# for chain in i-th row of X
+  psi <- as.matrix(psi)
+  n <- ncol(psi)
+  k <- nrow(psi)
+  
+  psi.means <- rowMeans(psi)
+  B <- n * var(psi.means)
+  psi.w <- apply(psi, 1, "var") 
+  W <- mean(psi.w)
+  v.hat <- W*(n-1)/n + (B/n)
+  r.hat <- v.hat / W 
+  return(r.hat)
+  }
+
+sigma<-2
+k <- 4
+n <- 15000 
+b <- 1000 #burn in length
+x0 <- c(-10, -5, 5, 10)
+#generate the chain
+X <- matrix(0, nrow=k, ncol=n) 
+for (i in 1:k) X[i, ]<-rw.Metropolis(sigma, x0[i], n)$x
+
+#compute diagnostic statistics 
+psi <- t(apply(X, 1, cumsum)) 
+for (i in 1:nrow(psi)) 
+  psi[i,] <- psi[i,] / (1:ncol(psi)) 
+print(Gelman.Rubin(psi))
+
+#plot psi for the four chains par(mfrow=c(2,2))
+for (i in 1:k)
+  plot(psi[i, (b+1):n], type="l", xlab=i, ylab=bquote(psi))
+par(mfrow=c(1,1)) #restore default
+
+#plot the sequence of R-hat statistics 
+rhat <- rep(0, n)
+for (j in (b+1):n)
+  rhat[j] <- Gelman.Rubin(psi[,1:j]) 
+plot(rhat[(b+1):n], type="l", xlab="", ylab="R") 
+abline(h=1.2, lty=2)
+
+```
+说明产生到1000个就已经满足要求R<1.2
+
+
+9.7
+Implement a Gibbs sampler to generate a bivariate normal chain (Xt , Yt ) with zero means, unit standard deviations, and correlation 0.9. Plot the generated sample after discarding a suitable burn-in sample. Fit a simple linear regression model Y = β0 + β1X to the sample and check the residuals of the model for normality and constant variance.
+```{r}
+##the code below is from book
+#initialize constants and parameters
+N <- 5000
+burn <- 1000
+X <- matrix(0, N, 2)
+
+rho <- 0.9
+mu1 <- 0
+mu2 <- 0
+sigma1 <- 1
+sigma2 <- 1
+s1 <- sqrt(1-rho^2)*sigma1 
+s2 <- sqrt(1-rho^2)*sigma2
+
+###### generate the chain #####
+X[1, ] <- c(mu1, mu2)
+
+for (i in 2:N) {
+  x2 <- X[i-1, 2]
+  m1 <- mu1 + rho * (x2 - mu2) * sigma1/sigma2 
+  X[i, 1] <- rnorm(1, m1, s1)
+  x1 <- X[i, 1]
+  m2 <- mu2 + rho * (x1 - mu1) * sigma2/sigma1 
+  X[i, 2] <- rnorm(1, m2, s2)
+}
+
+b <- burn + 1 
+x <- X[b:N, ]
+
+#plot the generated sample after discarding a suitable burn-in sample
+plot(x, main="", cex=.5, xlab=bquote(X), ylab=bquote(Y), ylim=range(x[,2]))
+
+#Fit a simple linear regression model 
+fit<-lm(X[,2]~X[,1])
+summary(fit)
+plot(x, main="", cex=.5, xlab=bquote(X), ylab=bquote(Y), ylim=range(x[,2])) #画散点图
+abline(fit) # 添加回归线
+
+# check the residuals of the model for normality and constant
+hist(fit$residuals)   #for normality
+qqnorm(fit$residuals)
+qqline(fit$residuals)
+
+plot(X[,1],fit$residuals) #for constant
+```
+可以看出残差满足正态性和同方差性。
+
+A-22011-2022-11-05
+======================================================
+中介效应的置换检验
+```{r} 
+data.gene<-function(a,b,N){
+  set.seed(12345)
+  e.m<-rnorm(N)
+  e.y<-rnorm(N)
+  a.M<-1
+  a.y<-2
+  x<-rnorm(N,1,2)
+  M<-a.M+a*x+e.m
+  y<-a.y+b*M+1*x+e.y
+  return(cbind(x,M,y))
+}
+
+#h=1,2,3分别表示在（1）alpha=0（2）beta=0（3）alpha=0&beta=0原假设下的置换检验
+permutation<-function(x,M,y,h){
+  fit1<-lm(M~x)
+  fit2<-lm(y~M+x)
+  alpha.hat<-fit1$coefficients[2]
+  beta.hat<--fit2$coefficients[2]
+  sab<-((alpha.hat^2)*(summary(fit2)$coefficients[2,2]^2)+(beta.hat^2)*(summary(fit1)$coefficients[2,2]^2))^0.5
+  t0<-alpha.hat*beta.hat/sab
+  R <- 999
+  reps <- numeric(R)
+  
+  set.seed(12345)
+  for(i in 1:R){
+     if(h==1){
+      z<-c(x,M)
+      k <- sample(length(z), size = N, replace = FALSE) 
+      x1 <- z[k]
+      M1 <- z[-k]
+      y1<-y
+      }else if(h==2){
+        z<-c(y,M)
+         k <- sample(length(z), size = N, replace = FALSE) 
+         x1 <- x
+         y1<- z[k] 
+         M1 <- z[-k]
+         }else{
+           z<-c(x,y,M)
+           k <- sample(3*N,replace = FALSE) 
+           x1 <- z[k[1:100]]
+           y1<- z[k[101:200]]
+           M1 <- z[k[201:300]]
+         }
+  fit1<-lm(M1~x1)
+  fit2<-lm(y1~M1+x1)
+  alpha.hat<-fit1$coefficients[2]
+  beta.hat<--fit2$coefficients[2]
+  sab<-((alpha.hat^2)*(summary(fit2)$coefficients[2,2]^2)+(beta.hat^2)*(summary(fit1)$coefficients[2,2]^2))^0.5
+  reps[i]<-alpha.hat*beta.hat/sab  
+   }
+  p<-mean(abs(c(t0,reps))>=abs(t0)) 
+  return(p)
+  }
+```
+
+（1）
+下面比较在原假设为alpha=0的情况下不同的参数设置犯第一类错误率(h=1)
+```{r}
+N<-100
+A<-data.gene(0,0,N)
+B<-data.gene(0,1,N)
+C<-data.gene(1,0,N)
+round(c(permutation(A[,1],A[,2],A[,3],1),permutation(B[,1],B[,2],B[,3],1),permutation(C[,1],C[,2],C[,3],1)),3)
+```
+
+
+（2）
+下面比较在原假设为beta=0的情况下不同的参数设置犯第一类错误率(h=2)
+```{r}
+N<-100
+A<-data.gene(0,0,N)
+B<-data.gene(0,1,N)
+C<-data.gene(1,0,N)
+round(c(permutation(A[,1],A[,2],A[,3],2),permutation(B[,1],B[,2],B[,3],2),permutation(C[,1],C[,2],C[,3],2)),3)
+```
+
+
+（3）
+下面比较在原假设为alpha=0&beta=0的情况下不同的参数设置犯第一类错误率(h=3)
+```{r}
+N<-100
+A<-data.gene(0,0,N)
+B<-data.gene(0,1,N)
+C<-data.gene(1,0,N)
+round(c(permutation(A[,1],A[,2],A[,3],3),permutation(B[,1],B[,2],B[,3],3),permutation(C[,1],C[,2],C[,3],3)),3)
+```
+
+
+A-22011-2022-11-11
+======================================================
+课后习题
+```{r}
+#极大似然法
+u<-c(11,8,27,13,16,0,23,10,24,2)
+v<-c(12,9,28,14,17,1,24,11,25,3)
+n<-length(u)
+mlogL <- function(lambda=1) {
+# minus log-likelihood
+  l<-0
+  for(i in 1:n){
+    l<-l+((u[i]*exp(-lambda*u[i])-v[i]*exp(-lambda*v[i]))/(exp(-lambda*v[i])-exp(-lambda*u[i])))
+  }
+return(l) }
+library(stats4)
+fit <- mle(mlogL)
+as.numeric(fit@coef)
+```
+
+2.1.3
+（4）Why do you need to use unlist() to convert a list to an atomic vector? Why doesn’t as.vector() work?
+```{r}
+# atomic
+a <- 1:5
+b <- letters[1:5]
+# list
+df <-data.frame(a,b)
+
+# as.vector作用于list无效
+vdf <- as.vector(df)
+attributes(vdf) # 属性没有改变
+is.vector(vdf) # FALSE
+vdf
+```
+```{r}
+# 转化数据框后向量带有名字
+udf <- unlist(df)
+attributes(udf) # 只有一个names属性
+udf
+vudf <- as.vector(udf)
+attributes(vudf) # NULL
+```
+
+ as.vector的作用是，当作用对象是atomic时，去除它的所有属性，如果是list则没改变,用is.vector检验也返回FALSE。我们有时用unlist转换后得到的向量是自带名字的
+ 
+ (5)Why is 1 == "1" true? Why is -1 < FALSE true? Why is "one" < 2 false?
+因为会先强制转换成数值进行比较
+```{r}
+as.numeric("1" )
+as.numeric(FALSE )
+as.numeric("one" )
+```
+ 
+ 
+2.3.1
+ (1)
+ What does dim() return when applied to a vector?
+ 返回将它排列好的矩阵
+```{r}
+a<-rep(1:9)
+dim(a)<-c(3,3)
+a
+```
+ 
+(2). If is.matrix(x) is TRUE, what will is.array(x) return?
+返回True
+```{r}
+is.matrix(a)
+is.array(a)
+```
+
+2.4.5
+（1）What attributes does a data frame possess?
+DataFrame有元素、索引、列名和类型这几个基础属性。
+```{r}
+df
+```
+
+(2)What does as.matrix() do when applied to a data frame with columns of different types?
+统一转换成一种的数据类型
+```{r}
+#example1
+as.matrix(df)
+#example2
+b2<-c(TRUE,F,T,F,F)
+a<-1:5
+df2<-data.frame(a,b2)
+as.matrix(df2)
+```
+
+（3）Can you have a data frame with 0 rows? What about 0 columns?
+可以。
+```{r}
+df<-df[-a,]
+df
+```
+
+
+
+A-22011-2022-11-18
+======================================================
+P204-2
+The function below scales a vector so it falls in the range [0, 1]. How would you apply it to every column of a data frame? How would you apply it to every numeric column in a data frame?
+scale01 <- function(x) {
+rng <- range(x, na.rm = TRUE)
+(x - rng[1]) / (rng[2] - rng[1])
+}
+use a for loop
+scale01不能作用与非numeric column in a dataframe 
+```{r}
+scale1<- function(x) {
+rng <- range(x, na.rm = TRUE)
+(x - rng[1]) / (rng[2] - rng[1])
+}
+data(iris)
+iris
+for(i in 1:(dim(iris)[2])){
+  if(is.numeric(iris[,i])) iris[,i]<-scale1(iris[,i]) 
+} 
+  
+iris
+```
+
+P213-1
+1. Use vapply() to:
+a) Compute the standard deviation of every column in a numeric data frame.
+b) Compute the standard deviation of every numeric column in a mixed data frame. (Hint: you’ll need to use vapply() twice.)
+```{r}
+#a)
+vapply(iris[,-5], sd,numeric(1))
+#b)
+vapply(iris, is.numeric, logical(1))
+vapply(iris[,vapply(iris, is.numeric, logical(1))], sd, numeric(1))
+```
+
+3
+Implement a Gibbs sampler to generate a bivariate normal chain (Xt, Yt) with zero means, unit standard
+deviations, and correlation 0.9.
+• Write an Rcpp function.(Xcode installment failed)
+• Compare the corresponding generated random numbers with pure R language using the function
+“qqplot”.
+• Compare the computation time of the two functions with the function “microbenchmark”.
+```{r}
+##the code below is from book
+#initialize constants and parameters
+N <- 5000
+burn <- 1000
+X <- matrix(0, N, 2)
+
+rho <- 0.9
+mu1 <- 0
+mu2 <- 0
+sigma1 <- 1
+sigma2 <- 1
+s1 <- sqrt(1-rho^2)*sigma1 
+s2 <- sqrt(1-rho^2)*sigma2
+
+###### generate the chain #####
+X[1, ] <- c(mu1, mu2)
+
+for (i in 2:N) {
+  x2 <- X[i-1, 2]
+  m1 <- mu1 + rho * (x2 - mu2) * sigma1/sigma2 
+  X[i, 1] <- rnorm(1, m1, s1)
+  x1 <- X[i, 1]
+  m2 <- mu2 + rho * (x1 - mu1) * sigma2/sigma1 
+  X[i, 2] <- rnorm(1, m2, s2)
+}
+
+b <- burn + 1 
+x <- X[b:N, ]
+
+qqplot(x[,1],x[,2])
+
+```
+
+

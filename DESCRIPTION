@@ -1,0 +1,17 @@
+Package: StatComp22011
+Type: Package
+Title: Estimate the weights in SMAP in solving two catagories classification problem
+Version: 1.0
+Date: 2022-12-07
+Author: Yuanyuan Yan
+Maintainer: Yuanyuan Yan <yanyuanyuan0217@163.com>
+Description: get both the results from SMAP method and a improved SMAP method by inserting the validation set.
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.9),mvtnorm,splines2,nnet,quadprog,splitTools,stats
+LinkingTo: Rcpp
+Encoding: UTF-8
+Suggests: knitr, rmarkdown
+VignetteBuilder: knitr
+RoxygenNote: 7.2.1
+URL: http://github.com/yuanyuanYanustc/StatComp22011
+BugReports: http://github.com/yuanyuanYanustc/StatComp22011/issues
